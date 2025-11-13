@@ -1,11 +1,14 @@
 ---
-title: 'York Street Footfall Analysis for Optimal Vendor Positioning'
-author: 'Chien-Hao Wang'
+title: "York Street Footfall Analysis for Optimal Vendor Positioning"
+author: "Chien-Hao Wang"
 output:
   html_document:
-    toc: yes
+    toc: true
     toc_depth: 3
-editor_options: 
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+editor_options:
   chunk_output_type: console
 ---
 
@@ -197,50 +200,56 @@ The plot shows that the daily footfall in Micklegate ranged from 5,000 to 10,000
 
 ## 4. Perform a two-sided t-test to compare the footfall on Coney Street to Stonegate. 
 ```{r}
-york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate")) %>%
-  t.test(TotalCount~LocationName, data = .)
+# Subset data for Coney Street and Stonegate
+all_days_data <- york_footfall.2019 %>%
+  filter(LocationName %in% c("Coney Street", "Stonegate"))
 
-# After removing outliers to improve the outcome of t-test analysis. The outcome does not affect the conclusion that the number of passers on Coney Street is significantly higher than those on Stonegate.
+# Main t-test (all available days)
+t.test(TotalCount ~ LocationName, data = all_days_data)
 
-york_footfall.2019 %>%
-  filter(TotalCount < 40000) %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate")) %>%
-  t.test(TotalCount~LocationName, data = .)
+# Sensitivity check: exclude days with very high counts
+# (cap chosen based on inspection of the histogram; used only for robustness check)
+upper_cap <- 40000
+
+all_days_no_extreme <- all_days_data %>%
+  filter(TotalCount < upper_cap)
+
+t.test(TotalCount ~ LocationName, data = all_days_no_extreme)
 ```
 
-The average number of daily passers on Coney Street is 20,817. Stonegate has an average of 19,204 passers, 1,613 fewer than those on Coney Street. The difference of 1,613 is statistically significant, $t(699.18) = 3.3611$, $p=0.0008$. It is also presented on the Figure 2, showing the average of footfall on Coney Street is larger than that on Stonegate and having significantly difference.
+The average number of daily passers on Coney Street is 20,817, compared with 19,204 on Stonegate, a difference of 1,613 passers.
+This difference is statistically significant, $t(699.18) = 3.36$, $p = 0.0008$.
+
+Figure 2 supports this result: the distribution for Coney Street is shifted to the right, and the mean footfall line lies clearly to the right of that for Stonegate.
+
+To check whether the conclusion is driven by a small number of very high footfall values, a **sensitivity analysis** was conducted by excluding days with TotalCount ≥ 40,000. The t-test on this restricted sample remains significant and the difference in means is similar, indicating that the finding that Coney Street attracts higher daily footfall than Stonegate is robust to the treatment of these extreme values.
 
 ```{r, warning=FALSE}
-# Prepare the mean footfall only on Coney Street and Stonegate
-mean_total_count.all.days <- york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate")) %>%
+# Prepare the mean footfall on Coney Street and Stonegate (all days)
+mean_total_count.all.days <- all_days_data %>%
   group_by(LocationName) %>%
-  summarise(mean_count = mean(TotalCount), .groups = 'drop')
+  summarise(mean_count = mean(TotalCount), .groups = "drop")
 
-# Plot a histogram to show intuitive picture telling the difference between the mean footfall on two locaations
-plot1 <- york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate")) %>%
-  ggplot(york_footfall.2019, mapping = aes(x = TotalCount, fill = LocationName)) +
+# Histogram for all days
+plot1 <- all_days_data %>%
+  ggplot(aes(x = TotalCount, fill = LocationName)) +
   geom_histogram(alpha = 0.8, binwidth = 500, position = "stack") +
-  facet_wrap(~ LocationName, nrow=2) + 
+  facet_wrap(~ LocationName, nrow = 2) +
   labs(
     caption = "Figure 2: Comparative Distribution of Daily Footfall on Coney Street and Stonegate in 2019",
     x = "Daily Footfall Count (Number of Passers)",
     y = "Frequency (Days)"
-  ) + 
-  
-  # Add lines to indicate the average of Footfall on Coney Street and Stonegate
-  geom_vline(data = mean_total_count.all.days, 
+  ) +
+  geom_vline(data = mean_total_count.all.days,
              aes(xintercept = mean_count), size = 0.6) +
-  geom_text(data = mean_total_count.all.days, 
+  geom_text(data = mean_total_count.all.days,
             aes(x = mean_count, y = 50, label = "Mean Footfall"),
             hjust = -0.2, size = 3.5) +
   theme_light() +
   theme(
-    axis.title.x = element_text(size = 12, face = "bold"),                    
+    axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    strip.text = element_text(size = 12, color = "black", face = "bold")
+    strip.text   = element_text(size = 12, colour = "black", face = "bold")
   )
 
 plot1
@@ -249,63 +258,73 @@ plot1
 
 ## 5. Perform an additional two-sided t-test to compare the footfall on Coney Street to Stonegate only on weekends (i.e. Saturdays/Sundays).
 ```{r}
-york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate") & WeekDay %in% c("Saturday", "Sunday")) %>%
-  t.test(TotalCount~LocationName, data = .)
+# Subset weekend data (Saturdays and Sundays only)
+weekend_data <- york_footfall.2019 %>%
+  filter(LocationName %in% c("Coney Street", "Stonegate"),
+         WeekDay %in% c("Saturday", "Sunday"))
 
-# The t-test removing outliers was also conducted, and the outcome still indicates the significant difference between Coney Street and Stonegate, specifically on weekends.
+# Main weekend t-test
+t.test(TotalCount ~ LocationName, data = weekend_data)
 
-york_footfall.2019 %>%
-  filter(TotalCount < 40000) %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate") & WeekDay %in% c("Saturday", "Sunday")) %>%
-  t.test(TotalCount~LocationName, data = .)
+# Sensitivity check on weekends using the same upper cap
+weekend_no_extreme <- weekend_data %>%
+  filter(TotalCount < upper_cap)
+
+t.test(TotalCount ~ LocationName, data = weekend_no_extreme)
 ```
 
-Particularly at weekends, 25,863 passers on Coney Street are compared to 26,167 passers on Stonegate. However, the difference of 304 is not statistically significant: $t(203.88) = -0.29072$, $p=0.7716$. It also shows at the Figure 3, a slightly different in the mean footfall.
+At weekends, the mean number of daily passers is 25,863 on Coney Street and 26,167 on Stonegate, a difference of 304 passers.
+The two-sided t-test shows that this difference is not statistically significant, $t(203.88) = −0.29$, $p = 0.772$.
+
+This is consistent with Figure 3, where the weekend distributions of the two locations look broadly similar, with only a slight difference in their mean lines.
+
+As with the all-days analysis, a sensitivity check was carried out by excluding days with TotalCount ≥ 40,000. After removing these extreme values, the mean weekend footfall is 25,512 on Coney Street and 25,019 on Stonegate, a difference of 493 passers. However, this difference remains non-significant, $t(198) = 0.53$, $p = 0.599$.
+
+This confirms that the conclusion of no meaningful difference in average weekend footfall between the two streets is not sensitive to how these extreme days are treated.
 
 ```{r}
-# Prepare the mean footfall only on Coney Street and Stonegate at weekends
-mean_total_count.weekends <- york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate") & Days_of_The_Week == "Weekend") %>%
+# Prepare the mean weekend footfall
+mean_total_count.weekends <- weekend_data %>%
   group_by(LocationName) %>%
-  summarise(mean_count = mean(TotalCount), .groups = 'drop')
+  summarise(mean_count = mean(TotalCount), .groups = "drop")
 
-# Plot a histogram to show intuitive picture telling the difference between the mean footfall on two locaations only at weekends
-plot2 <- york_footfall.2019 %>%
-  filter(LocationName %in% c("Coney Street", "Stonegate") & Days_of_The_Week == "Weekend") %>%
-  ggplot(york_footfall.2019, mapping = aes(x = TotalCount, fill = LocationName)) +
+# Histogram for weekends
+plot2 <- weekend_data %>%
+  ggplot(aes(x = TotalCount, fill = LocationName)) +
   geom_histogram(alpha = 0.8, binwidth = 500, position = "stack") +
-  facet_wrap(~ LocationName, nrow=2) + 
+  facet_wrap(~ LocationName, nrow = 2) +
   labs(
     caption = "Figure 3: Distribution of Daily Footfall on Coney Street and Stonegate at weekends in 2019",
     x = "Daily Footfall Count (Number of Passers)",
     y = "Frequency (Days)"
-  ) + 
-  
-  # Add lines to indicate the average of Footfall on Coney Street and Stonegate
-  geom_vline(data = mean_total_count.weekends, 
+  ) +
+  geom_vline(data = mean_total_count.weekends,
              aes(xintercept = mean_count), size = 0.6) +
-  geom_text(data = mean_total_count.weekends, 
+  geom_text(data = mean_total_count.weekends,
             aes(x = mean_count, y = 50, label = "Mean Footfall"),
             hjust = -0.2, size = 3.5) +
   theme_light() +
   theme(
-    axis.title.x = element_text(size = 12, face = "bold"),                    
+    axis.title.x = element_text(size = 12, face = "bold"),
     axis.title.y = element_text(size = 12, face = "bold"),
-    strip.text = element_text(size = 12, color = "black", face = "bold")
+    strip.text   = element_text(size = 12, colour = "black", face = "bold")
   )
 
 plot2
 
 ```
 
-Moreover, after removing outliers, there were 25,512 passers on Coney Street. On Stonegate, there are 25,019 passers, which is a difference of 493. Although the difference is still not statistically significant, the average number of passers on Coney Street is higher than those on Stonegate, $t(198) = 0.52608$, $p=0.5994$.
-
 ---
 
 # Recommendation to The Promoter
 Based on the findings above: 
 
-- For every day of the week: Coney Street is recommended for maximising footfall, as it has a significantly higher daily average than Stonegate across all days. 
+- **All days of the week**
+Coney Street records a significantly higher average daily footfall than Stonegate, and this result is robust to the exclusion of extreme high-footfall days.
 
-- For weekends only: There is no statistically significant difference in footfall between Coney Street and Stonegate. Therefore, Coney Street is the more recommended place to place the stall, although Stonegate may offer a slightly higher volume of weekend passers. The t-test analysis removing outliers presents a more consistent pattern of passers on Coney Street than Stonegate. Therefore, I will recommend to place the stall on Coney Street.
+  *Recommendation*: If the stall is to be placed every day, Coney Street is the preferred location for maximising exposure.
+
+- **Weekends only (Saturdays/Sundays)**
+The difference in average weekend footfall between Coney Street and Stonegate is not statistically significant, and this conclusion does not change when extreme days are excluded. Stonegate occasionally shows very high counts, but these are infrequent; Coney Street offers a slightly more stable pattern.
+
+  *Recommendation*: When operating only at weekends, either street is viable, but Coney Street is marginally preferred as a more consistent and lower-risk option.
