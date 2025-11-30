@@ -2,8 +2,7 @@
 *Maximising Customer Exposure: Footfall Analytics for York Street Locations*
 
 ![Status](https://img.shields.io/badge/Status-Project_Completed-success)
-![SQL](https://img.shields.io/badge/SQL-Data_Extraction-4479A1?style=flat&logo=postgresql&logoColor=white)
-![Tableau](https://img.shields.io/badge/Tableau-Dashboarding-E97627?style=flat&logo=tableau&logoColor=white)
+![R](https://img.shields.io/badge/R-Statistical_Analysis-276DC3?style=flat&logo=r&logoColor=white)
 
 ---
 ## Table of Contents
